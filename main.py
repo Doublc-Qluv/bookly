@@ -1,78 +1,124 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.exceptions import HTTPException
+from pydantic import BaseModel, Field
+from typing import List
 
 
 app = FastAPI()
 
-# 路径参数和查询参数
+books = [
+    {
+        "id": 1,
+        "title": "Think Python",
+        "author": "Allen B. Downey",
+        "publisher": "O'Reilly Media",
+        "published_date": "2012-01-01",
+        "page_count": 224,
+        "language": "English",
+    },
+    {
+        "id": 2,
+        "title": "Django for Beginners",
+        "author": "Markus K. Kuhnel",
+        "publisher": "Packt Publishing",
+        "published_date": "2012-01-01",
+        "page_count": 320,
+        "language": "English",
+    },
+    {
+        "id": 3,
+        "title": "FastAPI: Building Web APIs with FastAPI",
+        "author": "Sebastián Ramírez",
+        "publisher": "Packt Publishing",
+        "published_date": "2022-01-01",
+        "page_count": 320,
+        "language": "English",
+    },
+    {
+        "id": 4,
+        "title": "Python for Data Analysis",
+        "author": "Wes McKinney",
+        "publisher": "O'Reilly Media",
+        "published_date": "2013-01-01",
+        "page_count": 320,
+        "language": "English",
+    },
+    {
+        "id": 5,
+        "title": "Python for Data Science",
+        "author": "Wes McKinney",
+        "publisher": "O'Reilly Media",
+        "published_date": "2014-01-01",
+        "page_count": 320,
+        "language": "English",
+    },
+    {
+        "id": 6,
+        "title": "Python for Data Visualization",
+        "author": "Wes McKinney",
+        "publisher": "O'Reilly Media",
+        "published_date": "2015-01-01",
+        "page_count": 320,
+        "language": "English",
+    },
+]
 
-# http://localhost:8000/
-# {"message": "Hello World!"}
-@app.get("/")
-async def read_root():
-    return {"message": "Hello World!"}
+class Book(BaseModel):
+    id: int = Field(description="The ID of the book")
+    title: str = Field(description="The title of the book")
+    author: str = Field(description="The author of the book")
+    publisher: str = Field(description="The publisher of the book")
+    published_date: str = Field(description="The published date of the book")
+    page_count: int = Field(description="The page count of the book")
+    language: str = Field(description="The language of the book")
 
-# http://localhost:8000/greet/luv
-# {"message": "Hello, luv!"}
-@app.get('/greet/{name}')
-async def greet_name(name: str) -> dict:
-    return {"message": f"Hello, {name}!"}
-
-# http://localhost:8000/greetname?name=luv
-# {"message": "Hello, your name is luv!"}
-@app.get('/greet_name')
-async def greet_name(name: str) -> dict:
-    return {"message": f"Hello, your name is {name}!"}
-
-# http://localhost:8000/greet_mix/luv?age=20
-# {"message": "Hello, luv! You are 20 years old."}
-@app.get('/greet_mix/{name}')
-async def greet_name_mix(name: str, age: int) -> dict:
-    return {"message": f"Hello, {name}! You are {age} years old."}
+class BookUpdateModel(BaseModel):
+    title: str = Field(description="The title of the book")
+    author: str = Field(description="The author of the book")
+    publisher: str = Field(description="The publisher of the book")
+    published_date: str = Field(description="The published date of the book")
+    page_count: int = Field(description="The page count of the book")
+    language: str = Field(description="The language of the book")
 
 
+@app.get('/books', response_model=List[Book])
+async def get_books():
+    return books
 
-from typing import Optional
-# http://localhost:8000/greet_optional/luv?age=20  
-# {"message": "Hello, luv! You are 20 years old."}
-# http://localhost:8000/greet_optional/luv
-# {"message": "Hello, luv! You are 0 years old."}
-# http://localhost:8000/greet_optional/
-# {"message": "Hello, User! You are 0 years old."}
-@app.get('/greet_optional')
-async def greet_name_optional(name:Optional[str] = "User",age:int = 0) -> dict:
-    return {"message": f"Hello, {name}! You are {age} years old."}
-        
-        
-# 简单的请求体模型，创建一本书，并返回创建成功的信息
-from pydantic import BaseModel
+@app.post('/books', status_code=status.HTTP_201_CREATED)
+async def create_book(book_data: Book) -> dict:
+    new_book = book_data.model_dump()
+    books.append(new_book)
+    return new_book
 
-class BookCreateModel(BaseModel):
-    title: str
-    author: str
+@app.get('/books/{book_id}')
+async def get_book(book_id: int) -> dict:
+    for book in books:
+        if book['id'] == book_id:
+            return book
+    raise HTTPException(
+        detail="Book not found", 
+        status_code=status.HTTP_404_NOT_FOUND
+    )
 
-@app.post('/create_book')
-async def create_book(book_data: BookCreateModel) -> dict:
-    return {
-        "message": "Book created",
-        "title": book_data.title,
-        "author": book_data.author,
-        
-    }
-   
-# 获得请求头信息
-from fastapi import Request, Header
-@app.get('/get_headers')
-async def get_headers(
-    accept: str = Header(None),
-    content_type: str = Header(None),
-    user_agent: str = Header(None),
-    host: str = Header(None),
-):
-    request_headers = {}
-    request_headers["Accept"] = accept
-    request_headers["Content-Type"] = content_type
-    request_headers["User-Agent"] = user_agent
-    request_headers["Host"] = host
+@app.patch('/books/{book_id}')
+async def update_book(book_id: int, book_data: BookUpdateModel) -> dict:
+    for book in books:
+        if book['id'] == book_id:
+            book.update(book_data.model_dump())
+            return {"message": "Book updated"}
+    raise HTTPException(
+        detail="Book not found", 
+        status_code=status.HTTP_404_NOT_FOUND
+    )
 
-    return request_headers
-        
+@app.delete('/books/{book_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_book(book_id: int):
+    for book in books:
+        if book['id'] == book_id:
+            books.remove(book)
+            return {}
+    raise HTTPException(
+        detail="Book not found", 
+        status_code=status.HTTP_404_NOT_FOUND
+    )
