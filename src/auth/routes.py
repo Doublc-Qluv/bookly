@@ -34,6 +34,7 @@ async def create_user_account(
     return new_user
 
 
+# 注意请求体中的Header需要包含Content-Type: application/json
 @auth_router.post("/login")
 async def login_user(
     user_data: UserLoginModel, session: AsyncSession = Depends(get_session)
