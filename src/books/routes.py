@@ -7,15 +7,16 @@ from typing import List
 from src.books.schemas import Book, BookUpdateModel, BookCreateModel
 from src.db.main import get_session
 from src.books.service import BookService
-from src.auth.dependencies import AccessTokenBearer
+from src.auth.dependencies import AccessTokenBearer, RoleChecker
 
 
 book_router = APIRouter()
 book_service = BookService()
 access_token_bearer = AccessTokenBearer()
+role_checker = Depends(RoleChecker(["admin", "user"]))
 
 
-@book_router.get("/", response_model=List[Book])
+@book_router.get("/", response_model=List[Book], dependencies=[role_checker])
 async def get_books(
     session: AsyncSession = Depends(get_session),
     user_details=Depends(access_token_bearer),
@@ -25,7 +26,12 @@ async def get_books(
     return books
 
 
-@book_router.post("/", status_code=status.HTTP_201_CREATED, response_model=Book)
+@book_router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=Book,
+    dependencies=[role_checker],
+)
 async def create_a_book(
     book_data: BookCreateModel,
     session: AsyncSession = Depends(get_session),
@@ -35,7 +41,9 @@ async def create_a_book(
     return new_book
 
 
-@book_router.get("/{book_uid}", response_model=Book)
+@book_router.get(
+    "/{book_uid}", response_model=Book, dependencies=[role_checker]
+)
 async def get_book(
     book_uid: str,
     session: AsyncSession = Depends(get_session),
@@ -50,7 +58,9 @@ async def get_book(
         )
 
 
-@book_router.patch("/{book_uid}", response_model=Book)
+@book_router.patch(
+    "/{book_uid}", response_model=Book, dependencies=[role_checker]
+)
 async def update_a_book(
     book_uid: str,
     book_update_data: BookUpdateModel,
@@ -66,7 +76,11 @@ async def update_a_book(
         )
 
 
-@book_router.delete("/{book_uid}", status_code=status.HTTP_204_NO_CONTENT)
+@book_router.delete(
+    "/{book_uid}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[role_checker],
+)
 async def delete_a_book(
     book_uid: str,
     session: AsyncSession = Depends(get_session),
