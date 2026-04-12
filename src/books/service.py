@@ -13,6 +13,11 @@ class BookService:
         statement = select(Book).order_by(desc(Book.created_at))
         result = await session.exec(statement)
         return result.all()
+    
+    async def get_user_books(self, user_uid: str, session: AsyncSession):
+        statement = select(Book).where(Book.user_uid == user_uid).order_by(desc(Book.created_at))
+        result = await session.exec(statement)
+        return result.all()
 
     async def get_book(self, book_uid: str, session: AsyncSession):
         try:
@@ -22,10 +27,15 @@ class BookService:
         except ValueError:
             return None
 
-    async def create_book(self, book_data: BookCreateModel, session: AsyncSession):
+    async def create_book(
+        self, book_data: BookCreateModel, user_uid: str, session: AsyncSession
+    ):
         book_data_dict = book_data.model_dump()
         new_book = Book(**book_data_dict)
-        new_book.published_date = datetime.strptime(book_data_dict["published_date"], "%Y-%m-%d")
+        new_book.published_date = datetime.strptime(
+            book_data_dict["published_date"], "%Y-%m-%d"
+        )
+        new_book.user_uid = user_uid
         session.add(new_book)
         await session.commit()
         return new_book
@@ -39,7 +49,9 @@ class BookService:
         update_data_dict = book_data.model_dump()
         for key, value in update_data_dict.items():
             if key == "published_date":
-                setattr(book_to_update, key, datetime.strptime(value, "%Y-%m-%d").date())
+                setattr(
+                    book_to_update, key, datetime.strptime(value, "%Y-%m-%d").date()
+                )
             else:
                 setattr(book_to_update, key, value)
         book_to_update.updated_at = datetime.now()
