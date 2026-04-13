@@ -4,8 +4,8 @@ from sqlmodel import select, desc
 import uuid
 from datetime import datetime
 
-from .schemas import BookCreateModel, BookUpdateModel
-from .models import Book
+from src.books.schemas import BookCreateModel, BookUpdateModel
+from src.db.models import Book
 
 
 class BookService:
