@@ -1,6 +1,6 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import HTTPException, status
-
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import desc, select
 # from fastapi.exceptions import HTTPException
 
 from src.db.models import Review
@@ -24,7 +24,9 @@ class ReviewService:
     ):
         try:
             book = await book_service.get_book(book_uid=book_uid, session=session)
-            user = await user_service.get_user_by_email(email=user_email, session=session)
+            user = await user_service.get_user_by_email(
+                email=user_email, session=session
+            )
             review_data_dict = review_data.model_dump()
             new_review = Review(**review_data_dict)
             if not book:
@@ -48,3 +50,34 @@ class ReviewService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error adding review to book: {str(e)}",
             )
+
+    async def get_review(self, review_uid: str, session: AsyncSession):
+        statement = select(Review).where(Review.uid == review_uid)
+
+        result = await session.exec(statement)
+
+        return result.first()
+
+    async def get_all_reviews(self, session: AsyncSession):
+        statement = select(Review).order_by(desc(Review.created_at))
+
+        result = await session.exec(statement)
+
+        return result.all()
+
+    async def delete_review(
+        self, review_uid: str, user_email: str, session: AsyncSession
+    ):
+        user = await user_service.get_user_by_email(user_email, session)
+
+        review = await self.get_review(review_uid, session)
+
+        if not review or (review.user != user):
+            raise HTTPException(
+                detail="Cannot delete this review",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        await session.delete(review)
+
+        await session.commit()

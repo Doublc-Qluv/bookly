@@ -8,6 +8,7 @@ from src.books.schemas import Book, BookUpdateModel, BookCreateModel, BookDetail
 from src.db.main import get_session
 from src.books.service import BookService
 from src.auth.dependencies import AccessTokenBearer, RoleChecker
+from src.errors import BookNotFound
 
 
 book_router = APIRouter()
@@ -25,7 +26,10 @@ async def get_books(
     books = await book_service.get_all_books(session)
     return books
 
-@book_router.get("/user/{user_uid}", response_model=List[Book], dependencies=[role_checker])
+
+@book_router.get(
+    "/user/{user_uid}", response_model=List[Book], dependencies=[role_checker]
+)
 async def get_user_books_sumissions(
     user_uid: str,
     session: AsyncSession = Depends(get_session),
@@ -34,6 +38,7 @@ async def get_user_books_sumissions(
     print(token_details)
     books = await book_service.get_user_books(user_uid, session)
     return books
+
 
 @book_router.post(
     "/",
@@ -51,7 +56,9 @@ async def create_a_book(
     return new_book
 
 
-@book_router.get("/{book_uid}", response_model=BookDetailModel, dependencies=[role_checker])
+@book_router.get(
+    "/{book_uid}", response_model=BookDetailModel, dependencies=[role_checker]
+)
 async def get_book(
     book_uid: str,
     session: AsyncSession = Depends(get_session),
@@ -61,9 +68,7 @@ async def get_book(
     if book:
         return book
     else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Book not found"
-        )
+        raise BookNotFound()
 
 
 @book_router.patch("/{book_uid}", response_model=Book, dependencies=[role_checker])
@@ -77,9 +82,7 @@ async def update_a_book(
     if updated_book:
         return updated_book
     else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Book not found"
-        )
+        raise BookNotFound()
 
 
 @book_router.delete(
@@ -94,8 +97,6 @@ async def delete_a_book(
 ):
     book_to_delete = await book_service.delete_book(book_uid, session)
     if book_to_delete is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Book not found"
-        )
+        raise BookNotFound()
     else:
         return {}
