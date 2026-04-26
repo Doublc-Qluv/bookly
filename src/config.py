@@ -14,7 +14,23 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
 
+    
+
+    MAIL_USERNAME: str
+    MAIL_PASSWORD: str
+    MAIL_FROM: str
+    MAIL_FROM_NAME: str
+    MAIL_SERVER: str
+    MAIL_PORT: int
+    MAIL_STARTTLS: bool = False
+    MAIL_SSL_TLS: bool = True
+    USE_CREDENTIALS: bool = True
+    VALIDATE_CERTS: bool = True
+    DOMAIN:str
+    # TEMPLATE_FOLDER: str = os.path.join(BASE_DIR, "templates")
+    
     model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")
+    
 
-
+    
 Config = Settings()
