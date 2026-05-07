@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, BackgroundTasks
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -33,7 +33,7 @@ from src.db.redis import add_jti_to_blocklist
 from src.errors import UserAlreadyExists, UserNotFound, InvalidCredentials, InvalidToken
 from src.mail import mail, create_message
 from src.config import Config
-
+from src.celery_tasks import send_email
 
 from datetime import timedelta, time, datetime
 
@@ -48,21 +48,19 @@ REFRESH_TOKEN_EXPIRY = 2
 @auth_router.post("/send_mail")
 async def send_mail(emails: EmailModel):
     emails = emails.addresses
-
+    subject = "Welcome to our app"
     html = "<h1>Welcome to the app</h1>"
-    message = create_message(
-        recipient=emails,
-        subject="Welcome to our app",
-        body=html,
-    )
-    await mail.send_message(message)
+
+    send_email.delay(emails, subject, html)
 
     return {"message": "Email sent successfully"}
 
 
 @auth_router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user_account(
-    user_data: UserCreateModel, session: AsyncSession = Depends(get_session)
+    user_data: UserCreateModel,
+    bg_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
 ):
     email = user_data.email
     user_exists = await user_service.user_exists(email, session)
@@ -75,17 +73,21 @@ async def create_user_account(
     token = create_url_safe_token({"email": email})
     link = f"{Config.DOMAIN}/api/v1/auth/verify/{token}"
 
-    html_message = f"""
+    html = f"""
     <h1>Verify your email</h1>
     <p>Click the link below to verify your email:</p>
     <a href="{link}">Verify Email</a>
     """
-    message = create_message(
-        recipient=[email],
-        subject="Verify your email",
-        body=html_message,
-    )
-    await mail.send_message(message)
+    # message = create_message(
+    #     recipient=[email],
+    #     subject="Verify your email",
+    #     body=html,
+    # )
+    # bg_tasks.add_task(mail.send_message, message)
+    
+    email = [email]
+    subject = "Verify your email"
+    send_email.delay(email, subject, html)
     return {
         "message": "Account created successfully, please verify your email to continue",
         "user": new_user,
