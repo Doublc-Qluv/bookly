@@ -26,6 +26,7 @@
 - **邮件服务**: FastAPI-Mail
 
 ## 项目结构
+```
 bookly/
 ├── src/                    # 源代码目录
 │   ├── auth/               # 认证模块
@@ -78,7 +79,7 @@ bookly/
 ├── install.sh             # 安装脚本
 ├── requirements.txt       # Python 依赖
 └── README.md              # 项目说明
-
+```
 
 
 
